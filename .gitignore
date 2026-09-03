@@ -15,6 +15,10 @@ venv/
 MEMORY.md
 _check.py
 
+# Локальные генераторы шуточного корпуса (в портфолио — серьёзный docs/)
+rewrite_cats.py
+gender_fix.py
+
 # Generated / large data (recreate locally)
 chroma_db/
 models/
