@@ -31,7 +31,11 @@ except Exception:
 
 # Авто-переиндексация: следим за папкой docs/ и при изменении .txt сами
 # пересобираем индекс (см. rag/engine.py -> RAGEngine.start_watcher).
-engine.start_watcher()
+# Фоновый поток-наблюдатель не нужен в тестах/CI (а на Linux его нативный
+# поток watchfiles падает при завершении процесса), поэтому отключаем его
+# явным флагом RAG_DISABLE_WATCHER=1 (ставится в tests/conftest.py).
+if os.environ.get("RAG_DISABLE_WATCHER") != "1":
+    engine.start_watcher()
 
 # --- FastAPI приложение ---
 app = FastAPI(

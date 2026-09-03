@@ -16,3 +16,6 @@ import tempfile
 
 os.environ["EMBED_PROVIDER"] = "hash"
 os.environ["CHROMA_DIR"] = tempfile.mkdtemp(prefix="kotobaza_test_")
+# Фоновый watcher (watchfiles) в тестах не нужен, а на Linux его поток падает
+# при завершении процесса (SIGABRT) -> отключаем, иначе CI «краснеет» после успеха.
+os.environ["RAG_DISABLE_WATCHER"] = "1"
