@@ -131,3 +131,8 @@ zstandard==0.25.0
 langchain-openai==1.6.0
 chardet==7.6.0
 pytest==9.1.1
+
+# Прямые импорты приложения (не тянутся транзитивно, потерялись при pip freeze):
+fastapi==0.141.1
+python-multipart==0.0.32
+python-telegram-bot==22.8
