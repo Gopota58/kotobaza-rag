@@ -8,7 +8,7 @@ RAGAS-стиль метрики качества RAG, реализованные
   * faithfulness      — поддержан ли ответ только фактами из контекста (LLM-судья)
   * answer_relevancy  — отвечает ли ответ на вопрос (LLM-судья)
   * context_precision — релевантны ли найденные фрагменты вопросу (LLM-судья)
-  * context_recall    — покрывает ли контекст эталонный ответ (лексический F1)
+  * context_recall    — покрывает ли контекст эталонный ответ (лексический recall)
 
 LLM-судья — это тот же локальный чат-модель; просим отвечать «да/нет» и
 парсим. При неуверенном ответе возвращаем None (исключается из усреднения).
@@ -76,16 +76,12 @@ def _tokenize(text: str):
 
 
 def context_recall_lexical(reference: str, contexts) -> float:
-    """Лексический recall: token-F1 между эталонным ответом и найденным контекстом."""
+    """Лексический recall: какая доля содержательных слов эталонного ответа
+    покрывается найденным контекстом (|ref ∩ ctx| / |ref|). Это именно recall,
+    а не F1: контекст заведомо больше и лексически богаче короткого эталона,
+    поэтому F1 штрафовал бы за размер и давал пессимистичные ~0.1."""
     ref_tok = _tokenize(reference)
     ctx_tok = _tokenize(" ".join(contexts))
     if not ref_tok:
         return 0.0
-    inter = ref_tok & ctx_tok
-    if not inter:
-        return 0.0
-    precision = len(inter) / len(ctx_tok) if ctx_tok else 0.0
-    recall = len(inter) / len(ref_tok)
-    if precision + recall == 0:
-        return 0.0
-    return 2 * precision * recall / (precision + recall)
+    return len(ref_tok & ctx_tok) / len(ref_tok)
