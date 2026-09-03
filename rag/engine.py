@@ -23,6 +23,7 @@ import chromadb
 import chardet
 import numpy as np
 from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
 from langchain_community.document_loaders import TextLoader, DirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
@@ -77,6 +78,34 @@ class AutoDetectTextLoader(TextLoader):
         super().__init__(file_path, encoding=encoding, **kwargs)
 
 
+class HashingEmbeddings(Embeddings):
+    """Детерминированный эмбеддер без внешних моделей и сети: feature hashing
+    символьных триграмм в фиксированную размерность. Даёт лексическое сходство
+    (пересекающиеся n-граммы -> близкие векторы) и нужен для ГЕРМЕТИЧНЫХ тестов и
+    CI, где недоступны ни локальные HF-модели (нет torch), ни внешний embedding-API.
+    В проде используется реальный провайдер (api/local); этот — только для тестов."""
+
+    dim = 256
+
+    def _embed(self, text: str) -> list[float]:
+        import hashlib
+
+        v = np.zeros(self.dim, dtype=np.float32)
+        t = text.lower()
+        for i in range(max(len(t) - 2, 0)):
+            g = t[i : i + 3].encode("utf-8")
+            idx = int.from_bytes(hashlib.blake2b(g, digest_size=4).digest(), "big") % self.dim
+            v[idx] += 1.0
+        n = float(np.linalg.norm(v))
+        return (v / n).tolist() if n else v.tolist()
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self._embed(t) for t in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._embed(text)
+
+
 # --- Фабрики ---
 def build_embeddings(s=None):
     s = s or default_settings
@@ -97,6 +126,8 @@ def build_embeddings(s=None):
         if base and ("localhost" in base or "127.0.0.1" in base):
             kwargs["http_client"] = httpx.Client(trust_env=False)
         return OpenAIEmbeddings(**kwargs)
+    if getattr(s, "embed_provider", "local") == "hash":
+        return HashingEmbeddings()
     # Локальные эмбеддинги (MiniLM через sentence-transformers/torch) — только по
     # запросу. Импорт ленивый, чтобы при embed_provider=api не тянуть тяжёлый torch.
     from langchain_huggingface import HuggingFaceEmbeddings

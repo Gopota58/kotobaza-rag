@@ -243,8 +243,11 @@ ruff check .                 # линтер (конфиг в pyproject.toml)
 ```
 
 GitHub Actions (`.github/workflows/ci.yml`) на каждый push/PR ставит зависимости,
-крутит `ruff` и `pytest`. Сквозной `ask()` проверяется с **фиктивной LLM**
-(`tests/test_ask_mock.py`), поэтому сьют зелёный в CI **без GPU и без внешнего сервера**.
+крутит `ruff` и `pytest`. Тесты **герметичны**: `tests/conftest.py` фиксирует
+детерминированный хэш-эмбеддер (`HashingEmbeddings`) и временный каталог Chroma, а
+сквозной `ask()` проверяется с **фиктивной LLM** (`tests/test_ask_mock.py`). Поэтому
+сьют зелёный в CI **без GPU, без torch и без запущенного LLM-сервера** — и не трогает
+рабочий индекс разработчика.
 
 ## Деплой (Docker)
 
